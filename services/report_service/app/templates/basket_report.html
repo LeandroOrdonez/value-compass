@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Basket Report: {{ basket.name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 14px;
+            color: #777;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .positive {
+            color: green;
+        }
+        .negative {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Stock Basket Report: {{ basket.name }}</h1>
+        <p>{{ basket.description }}</p>
+        <p>Generated on: {{ generated_at }}</p>
+    </div>
+    
+    <div class="section">
+        <h2>Basket Overview</h2>
+        <p>Total Stocks: {{ stocks|length }}</p>
+        <p>Basket Type: {{ "Public" if basket.is_public else "Private" }}</p>
+        
+        <!-- Performance chart -->
+        {% if performance_chart %}
+        <div class="chart-container">
+            <h3>Performance Chart</h3>
+            <img src="../reports/{{ performance_chart }}" alt="Performance Chart">
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="section">
+        <h2>Stocks</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Weight</th>
+                    <th>Current Price</th>
+                    <th>Market Cap</th>
+                    <th>Sector</th>
+                    <th>Industry</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                {% set ticker = stock.ticker %}
+                <tr>
+                    <td>{{ ticker }}</td>
+                    <td>{{ stock.weight }}</td>
+                    <td>
+                        {% if ticker in financial_data and 'close' in financial_data[ticker] %}
+                            ${{ "%.2f"|format(financial_data[ticker].close) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ticker in financial_data and 'market_cap' in financial_data[ticker] %}
+                            ${{ (financial_data[ticker].market_cap / 1000000000)|round(2) }}B
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ticker in financial_data and 'sector' in financial_data[ticker] %}
+                            {{ financial_data[ticker].sector }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ticker in financial_data and 'industry' in financial_data[ticker] %}
+                            {{ financial_data[ticker].industry }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h2>Valuation Analysis</h2>
+        
+        <!-- Valuation score chart -->
+        {% if valuation_chart %}
+        <div class="chart-container">
+            <h3>Valuation Scores</h3>
+            <img src="../reports/{{ valuation_chart }}" alt="Valuation Score Chart">
+        </div>
+        {% endif %}
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Valuation Score</th>
+                    <th>PE Ratio</th>
+                    <th>PB Ratio</th>
+                    <th>Dividend Yield</th>
+                    <th>ROE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticker in financial_data %}
+                {% set valuation_score = none %}
+                {% for score in valuation_scores %}
+                    {% if score.ticker == ticker %}
+                        {% set valuation_score = score %}
+                    {% endif %}
+                {% endfor %}
+                <tr>
+                    <td>{{ ticker }}</td>
+                    <td>
+                        {% if valuation_score and 'score' in valuation_score %}
+                            {{ "%.1f"|format(valuation_score.score) }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.2f"|format(financial_data[ticker].pe_ratio) if 'pe_ratio' in financial_data[ticker] and financial_data[ticker].pe_ratio else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(financial_data[ticker].pb_ratio) if 'pb_ratio' in financial_data[ticker] and financial_data[ticker].pb_ratio else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(financial_data[ticker].dividend_yield * 100) if 'dividend_yield' in financial_data[ticker] and financial_data[ticker].dividend_yield else 'N/A' }}%</td>
+                    <td>{{ "%.2f"|format(financial_data[ticker].roe * 100) if 'roe' in financial_data[ticker] and financial_data[ticker].roe else 'N/A' }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>Generated by Value Compass | {{ generated_at }}</p>
+        <p>This report is for informational purposes only and is not financial advice.</p>
+    </div>
+</body>
+</html>

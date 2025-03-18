@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Backend services
+  data-service:
+    build:
+      context: ./services/data_service
+    volumes:
+      - ./services/data_service:/app
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/valuecompass
+      - ENVIRONMENT=development
+
+  valuation-service:
+    build:
+      context: ./services/valuation_service
+    volumes:
+      - ./services/valuation_service:/app
+    ports:
+      - "8002:8000"
+    depends_on:
+      - db
+      - data-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/valuecompass
+      - DATA_SERVICE_URL=http://data-service:8000
+      - ENVIRONMENT=development
+
+  user-service:
+    build:
+      context: ./services/user_service
+    volumes:
+      - ./services/user_service:/app
+    ports:
+      - "8003:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/valuecompass
+      - JWT_SECRET=development_secret_key
+      - ENVIRONMENT=development
+
+  report-service:
+    build:
+      context: ./services/report_service
+    volumes:
+      - ./services/report_service:/app
+    ports:
+      - "8004:8000"
+    depends_on:
+      - db
+      - data-service
+      - valuation-service
+      - user-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/valuecompass
+      - DATA_SERVICE_URL=http://data-service:8000
+      - VALUATION_SERVICE_URL=http://valuation-service:8000
+      - USER_SERVICE_URL=http://user-service:8000
+      - ENVIRONMENT=development
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - data-service
+      - valuation-service
+      - user-service
+      - report-service
+    environment:
+      - API_URL=http://localhost
+
+  # Database
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=valuecompass
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
