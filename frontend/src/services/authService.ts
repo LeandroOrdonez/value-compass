@@ -9,15 +9,15 @@ export interface RegisterData {
   username: string;
   email: string;
   password: string;
-  fullName?: string;
+  full_name?: string;
 }
 
 export interface UserProfile {
   id: number;
   username: string;
   email: string;
-  fullName: string | null;
-  isActive: boolean;
+  full_name: string | null;
+  is_active: boolean;
 }
 
 const authService = {

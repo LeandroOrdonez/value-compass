@@ -76,14 +76,17 @@ export default function SignUpPage() {
     try {
       setLoading(true);
       await authService.register({
-        first_name: formData.firstName,
-        last_name: formData.lastName,
+        username: formData.email.split('@')[0], // Create username from email prefix
         email: formData.email,
         password: formData.password,
+        full_name: `${formData.firstName} ${formData.lastName}`,
       });
       
       // Log the user in automatically
-      await authService.login(formData.email, formData.password);
+      await authService.login({
+        username: formData.email.split('@')[0],
+        password: formData.password,
+      });
       
       router.push('/dashboard');
     } catch (err: any) {

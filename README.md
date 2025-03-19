@@ -17,6 +17,12 @@ The project consists of the following components:
 3. **User Service**: Handles authentication, authorization, and profile management
 4. **Report Service**: Generates reports and sends alerts
 
+### API Gateway
+
+- Nginx reverse proxy that routes frontend requests to the appropriate microservices
+- Handles CORS and request forwarding
+- Provides a single entry point for all frontend-to-backend communication
+
 ### Frontend
 
 - Built with Next.js/React
@@ -55,10 +61,11 @@ The easiest way to run the entire application with all its dependencies:
 
 2. The application will be available at:
    - Frontend: http://localhost:3000
-   - Data Service API: http://localhost:8000
-   - Valuation Service API: http://localhost:8001
-   - User Service API: http://localhost:8002
-   - Report Service API: http://localhost:8003
+   - API Gateway: http://localhost:80
+   - Data Service API (via Gateway): http://localhost/data-service
+   - Valuation Service API (via Gateway): http://localhost/valuation-service
+   - User Service API (via Gateway): http://localhost/user-service
+   - Report Service API (via Gateway): http://localhost/report-service
 
 3. To stop all services:
    ```bash
@@ -135,6 +142,12 @@ If running services locally without Docker:
 
 When services are running, API documentation is available at:
 
+- Data Service: http://localhost/data-service/docs
+- Valuation Service: http://localhost/valuation-service/docs
+- User Service: http://localhost/user-service/docs
+- Report Service: http://localhost/report-service/docs
+
+Direct access to services is also available (for development only):
 - Data Service: http://localhost:8000/docs
 - Valuation Service: http://localhost:8001/docs
 - User Service: http://localhost:8002/docs
@@ -145,8 +158,11 @@ When services are running, API documentation is available at:
 For production deployment, additional steps are recommended:
 
 1. Set up proper environment variables for production.
-2. Configure a reverse proxy like Nginx.
-3. Set up proper SSL certificates.
+2. The application already includes an Nginx API gateway for routing; in production:
+   - Configure SSL certificates for the gateway
+   - Set up additional security measures
+   - Consider load balancing for high availability
+3. Set up monitoring and logging for all services.
 4. Configure Kubernetes for orchestration (optional but recommended for scalability).
 
 ## License
