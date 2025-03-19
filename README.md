@@ -38,8 +38,8 @@ The project consists of the following components:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/my-value-compass.git
-   cd my-value-compass
+   git clone https://github.com/LeandroOrdonez/value-compass.git
+   cd value-compass
    ```
 
 2. Create environment variables for each service (examples provided in each service directory)
