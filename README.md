@@ -8,6 +8,51 @@ Value Compass uses financial indicators, historical data, and peer comparisons t
 
 ## Architecture
 
+The Value Compass application follows a microservices architecture pattern. Below is a high-level overview of the system components and their interactions:
+
+```mermaid
+graph TB
+    subgraph Frontend
+        NextJS[Next.js/React Frontend]
+    end
+
+    subgraph API_Gateway
+        Nginx[Nginx API Gateway]
+    end
+
+    subgraph Microservices
+        DS[Data Service]
+        VS[Valuation Service]
+        US[User Service]
+        RS[Report Service]
+    end
+
+    subgraph Data_Sources
+        YF[Yahoo Finance]
+        Other[Other Sources]
+    end
+
+    subgraph Database
+        DB[(PostgreSQL)]
+    end
+
+    NextJS -->|HTTP| Nginx
+    Nginx -->|/data-service| DS
+    Nginx -->|/valuation-service| VS
+    Nginx -->|/user-service| US
+    Nginx -->|/report-service| RS
+    DS -->|Fetch Data| YF
+    DS -->|Fetch Data| Other
+    VS -->|Get Data| DS
+    RS -->|Get Data| DS
+    RS -->|Get Valuations| VS
+    RS -->|Get User Info| US
+    DS -->|CRUD| DB
+    VS -->|CRUD| DB
+    US -->|CRUD| DB
+    RS -->|CRUD| DB
+```
+
 The project consists of the following components:
 
 ### Microservices
