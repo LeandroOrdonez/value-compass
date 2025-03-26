@@ -34,6 +34,8 @@ const authService = {
     
     if (response.data.access_token) {
       localStorage.setItem('token', response.data.access_token);
+      // Dispatch custom event to notify components about auth state change
+      window.dispatchEvent(new Event('auth-changed'));
     }
     
     return response.data;
@@ -46,6 +48,8 @@ const authService = {
 
   logout: () => {
     localStorage.removeItem('token');
+    // Dispatch custom event to notify components about auth state change
+    window.dispatchEvent(new Event('auth-changed'));
   },
 
   getCurrentUser: async (): Promise<UserProfile> => {

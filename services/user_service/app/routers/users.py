@@ -26,7 +26,7 @@ class UserCreate(BaseModel):
     def username_format(cls, v):
         if len(v) < 3:
             raise ValueError('Username must be at least 3 characters long')
-        if not v.isalnum():
+        if not all(c.isalnum() or c in '._-' for c in v):
             raise ValueError('Username must contain only alphanumeric characters')
         return v
 

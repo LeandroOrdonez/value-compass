@@ -88,6 +88,7 @@ export default function SignUpPage() {
         password: formData.password,
       });
       
+      // Authentication state will be updated via the auth-changed event
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Registration error:', err);

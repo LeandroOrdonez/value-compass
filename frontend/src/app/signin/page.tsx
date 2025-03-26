@@ -23,7 +23,10 @@ export default function SignInPage() {
     
     try {
       setLoading(true);
-      await authService.login(email, password);
+      await authService.login({
+        username: email.split('@')[0], // Using email prefix as username
+        password: password
+      });
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
