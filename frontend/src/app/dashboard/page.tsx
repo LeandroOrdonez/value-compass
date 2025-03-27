@@ -20,15 +20,26 @@ export default function Dashboard() {
       try {
         setLoading(true);
         
-        // Fetch data in parallel using Promise.all
-        const [stocksData, portfoliosData, basketsData, alertsData] = await Promise.all([
-          stockService.getWatchlist(),
+        // Search for some popular stocks to display instead of watchlist
+        const searchQuery = "tech"; // Example search query for tech stocks
+        const stocksData = await stockService.searchStocks(searchQuery);
+        
+        // Get portfolios, baskets and alerts
+        const [portfoliosData, basketsData, alertsData] = await Promise.all([
           portfolioService.getPortfolios(),
           basketService.getBaskets(),
           alertService.getTriggeredAlerts()
         ]);
 
-        setRecentStocks(stocksData.slice(0, 5));
+        // Create a formatted version of stock data for display
+        const formattedStocks = stocksData.map((stock: any) => ({
+          ticker: stock.ticker,
+          name: stock.name,
+          price: stock.price || 0,
+          change_percent: '0.00' // Using default since we don't have real data
+        }));
+
+        setRecentStocks(formattedStocks.slice(0, 5));
         setPortfolios(portfoliosData.slice(0, 3));
         setBaskets(basketsData.slice(0, 3));
         setAlerts(alertsData.slice(0, 5));

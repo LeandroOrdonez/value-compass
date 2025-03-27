@@ -30,12 +30,26 @@ export default function StocksPage() {
     const fetchStocks = async () => {
       try {
         setLoading(true);
-        const data = await stockService.getStocks();
-        setStocks(data);
-        setFilteredStocks(data);
+        
+        // Use searchStocks with empty query to get a list of stocks
+        const data = await stockService.searchStocks('');
+        
+        // Format the data to match our Stock interface
+        const formattedData = data.map((item: any) => ({
+          ticker: item.ticker,
+          name: item.name || '',
+          price: item.price || 0,
+          change_percent: '0.00', // Default value
+          market_cap: item.market_cap ? `$${(item.market_cap / 1000000000).toFixed(2)}B` : 'N/A',
+          pe_ratio: item.pe_ratio,
+          sector: item.sector
+        }));
+        
+        setStocks(formattedData);
+        setFilteredStocks(formattedData);
         
         // Extract unique sectors
-        const uniqueSectors = Array.from(new Set(data.map(stock => stock.sector).filter(Boolean)))
+        const uniqueSectors = Array.from(new Set(formattedData.map(stock => stock.sector).filter(Boolean)))
           .sort() as string[];
         setSectors(uniqueSectors);
         
@@ -255,12 +269,12 @@ export default function StocksPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{stock.pe_ratio?.toFixed(2) || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{stock.sector || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
+                    <Link
+                      href={`/stocks/${stock.ticker}`}
                       className="text-primary-600 dark:text-primary-400 hover:text-primary-900 mr-3"
-                      onClick={() => stockService.addToWatchlist(stock.ticker)}
                     >
-                      Add to Watchlist
-                    </button>
+                      View Details
+                    </Link>
                   </td>
                 </tr>
               ))
