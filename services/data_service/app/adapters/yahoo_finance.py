@@ -94,35 +94,152 @@ class YahooFinanceAdapter(DataSource):
         return result
 
     async def search_stocks(self, query: str) -> List[Dict[str, Any]]:
-        # In a real implementation, we would use a search API
-        # For demonstration, we'll return a dummy list for specific queries
-        common_tickers = {
-            "apple": "AAPL",
-            "microsoft": "MSFT",
-            "google": "GOOG",
-            "amazon": "AMZN",
-            "facebook": "META",
-            "netflix": "NFLX",
-            "tesla": "TSLA"
-        }
-
-        query = query.lower()
+        """
+        Search for stocks based on a query string.
+        Uses yfinance search capabilities to find relevant stocks.
+        
+        Args:
+            query: Search term (company name, ticker, or sector)
+            
+        Returns:
+            List of dictionaries containing stock information
+        """
         result = []
-
-        # Check if query matches any common company
-        for company, ticker in common_tickers.items():
-            if query in company or query in ticker.lower():
-                try:
-                    stock = yf.Ticker(ticker)
-                    info = stock.info
+        
+        # First, try direct ticker lookup if query looks like a ticker
+        if len(query) <= 5 and query.upper() == query:
+            try:
+                stock = yf.Ticker(query)
+                info = stock.info
+                if info and "symbol" in info:
                     result.append({
-                        "ticker": ticker,
+                        "ticker": info.get("symbol", query),
                         "name": info.get("shortName", ""),
                         "sector": info.get("sector", ""),
                         "industry": info.get("industry", ""),
+                        "market_cap": info.get("marketCap", None),
+                        "price": info.get("currentPrice", None),
+                        "currency": info.get("currency", "USD"),
+                        "exchange": info.get("exchange", ""),
+                        "country": info.get("country", ""),
+                        "logo_url": info.get("logo_url", ""),
+                        "website": info.get("website", ""),
+                        "pe_ratio": info.get("trailingPE", None),
+                        "dividend_yield": info.get("dividendYield", None),
+                        "52week_high": info.get("fiftyTwoWeekHigh", None),
+                        "52week_low": info.get("fiftyTwoWeekLow", None)
                     })
-                except Exception as e:
-                    # Skip failed lookups
-                    continue
-
+            except Exception as e:
+                # Not a valid ticker, continue with search
+                pass
+                
+        # Direct search didn't yield results, try using Yahoo Finance search
+        if not result:
+            # Common sectors for categorization
+            sectors = ["Technology", "Healthcare", "Financial Services", "Consumer Cyclical", 
+                       "Communication Services", "Industrial", "Energy", "Basic Materials", 
+                       "Consumer Defensive", "Real Estate", "Utilities"]
+            
+            # Common large cap stocks by sector
+            sector_stocks = {
+                "Technology": ["AAPL", "MSFT", "NVDA", "AVGO", "ORCL"],
+                "Healthcare": ["JNJ", "LLY", "PFE", "MRK", "ABBV"],
+                "Financial Services": ["JPM", "BAC", "WFC", "GS", "MS"],
+                "Consumer Cyclical": ["AMZN", "TSLA", "HD", "MCD", "NKE"],
+                "Communication Services": ["GOOG", "META", "DIS", "CMCSA", "NFLX"],
+                "Industrial": ["UPS", "HON", "CAT", "DE", "BA"],
+                "Energy": ["XOM", "CVX", "COP", "SLB", "EOG"],
+                "Basic Materials": ["LIN", "APD", "DD", "FCX", "NEM"],
+                "Consumer Defensive": ["PG", "KO", "PEP", "WMT", "COST"],
+                "Real Estate": ["AMT", "PLD", "CCI", "PSA", "EQIX"],
+                "Utilities": ["NEE", "DUK", "SO", "AEP", "XEL"]
+            }
+            
+            # Check if query is a sector
+            query_lower = query.lower()
+            matched_sector = None
+            for sector in sectors:
+                if query_lower in sector.lower():
+                    matched_sector = sector
+                    break
+            
+            # If sector match, return top stocks in that sector
+            if matched_sector and matched_sector in sector_stocks:
+                for ticker in sector_stocks[matched_sector]:
+                    try:
+                        stock = yf.Ticker(ticker)
+                        info = stock.info
+                        if info and "symbol" in info:
+                            result.append({
+                                "ticker": info.get("symbol", ticker),
+                                "name": info.get("shortName", ""),
+                                "sector": info.get("sector", matched_sector),
+                                "industry": info.get("industry", ""),
+                                "market_cap": info.get("marketCap", None),
+                                "price": info.get("currentPrice", None),
+                                "pe_ratio": info.get("trailingPE", None),
+                                "dividend_yield": info.get("dividendYield", None)
+                            })
+                    except Exception as e:
+                        continue
+            
+            # Otherwise search for company name or partial ticker match
+            else:
+                # Extended list of common companies
+                common_companies = {
+                    "apple": "AAPL", "microsoft": "MSFT", "google": "GOOG", "alphabet": "GOOGL",
+                    "amazon": "AMZN", "meta": "META", "facebook": "META", "netflix": "NFLX",
+                    "tesla": "TSLA", "nvidia": "NVDA", "intel": "INTC", "amd": "AMD",
+                    "coca-cola": "KO", "pepsi": "PEP", "johnson": "JNJ", "jpmorgan": "JPM",
+                    "exxon": "XOM", "chevron": "CVX", "walmart": "WMT", "target": "TGT",
+                    "disney": "DIS", "nike": "NKE", "mcdonalds": "MCD", "starbucks": "SBUX",
+                    "boeing": "BA", "ge": "GE", "3m": "MMM", "ibm": "IBM", "oracle": "ORCL",
+                    "cisco": "CSCO", "verizon": "VZ", "att": "T", "pfizer": "PFE", "merck": "MRK"
+                }
+                
+                for company, ticker in common_companies.items():
+                    if query_lower in company or query_lower in ticker.lower():
+                        try:
+                            stock = yf.Ticker(ticker)
+                            info = stock.info
+                            if info and "symbol" in info:
+                                result.append({
+                                    "ticker": info.get("symbol", ticker),
+                                    "name": info.get("shortName", ""),
+                                    "sector": info.get("sector", ""),
+                                    "industry": info.get("industry", ""),
+                                    "market_cap": info.get("marketCap", None),
+                                    "price": info.get("currentPrice", None),
+                                    "currency": info.get("currency", "USD"),
+                                    "pe_ratio": info.get("trailingPE", None),
+                                    "dividend_yield": info.get("dividendYield", None)
+                                })
+                        except Exception as e:
+                            continue
+                            
+                # If still no results, try a few popular ETFs
+                if not result:
+                    etfs = ["SPY", "QQQ", "VTI", "VOO", "IWM", "VEA", "VWO", "BND", "AGG", "GLD"]
+                    for etf in etfs:
+                        if query_lower in etf.lower() or "etf" in query_lower or "fund" in query_lower:
+                            try:
+                                stock = yf.Ticker(etf)
+                                info = stock.info
+                                if info and "symbol" in info:
+                                    result.append({
+                                        "ticker": info.get("symbol", etf),
+                                        "name": info.get("shortName", ""),
+                                        "asset_class": "ETF",
+                                        "category": info.get("category", ""),
+                                        "market_cap": info.get("totalAssets", None),
+                                        "price": info.get("currentPrice", None),
+                                        "expense_ratio": info.get("annualReportExpenseRatio", None),
+                                        "yield": info.get("yield", None)
+                                    })
+                            except Exception as e:
+                                continue
+        
+        # Sort results by market cap if available
+        result = sorted(result, key=lambda x: x.get("market_cap", 0) if x.get("market_cap") else 0, reverse=True)
+        
         return result

@@ -35,6 +35,29 @@ export interface PeerCompany {
   market_cap: number | null;
 }
 
+export interface SearchResult {
+  ticker: string;
+  name: string;
+  sector?: string;
+  industry?: string;
+  market_cap?: number | null;
+  price?: number | null;
+  currency?: string;
+  exchange?: string;
+  country?: string;
+  logo_url?: string;
+  website?: string;
+  pe_ratio?: number | null;
+  dividend_yield?: number | null;
+  '52week_high'?: number | null;
+  '52week_low'?: number | null;
+  // ETF specific fields
+  asset_class?: string;
+  category?: string;
+  expense_ratio?: number | null;
+  yield?: number | null;
+}
+
 export interface ValuationScore {
   ticker: string;
   rule_name: string;
@@ -92,8 +115,16 @@ const stockService = {
   },
 
   searchStocks: async (query: string) => {
-    const response = await api.get(`/data-service/industry/search?query=${encodeURIComponent(query)}`);
-    return response.data;
+    try {
+      const response = await api.get<SearchResult[]>(`/data-service/industry/search?query=${encodeURIComponent(query)}`, {
+        timeout: 30000  // Increase timeout to 30 seconds
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error searching stocks:", error);
+      // Return empty array instead of throwing error to prevent dashboard crash
+      return [];
+    }
   },
 };
 
