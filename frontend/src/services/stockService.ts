@@ -56,6 +56,9 @@ export interface SearchResult {
   category?: string;
   expense_ratio?: number | null;
   yield?: number | null;
+  // Trending stocks fields
+  change_percent?: string;
+  is_trending?: boolean;
 }
 
 export interface ValuationScore {
@@ -122,6 +125,19 @@ const stockService = {
       return response.data;
     } catch (error) {
       console.error("Error searching stocks:", error);
+      // Return empty array instead of throwing error to prevent dashboard crash
+      return [];
+    }
+  },
+  
+  getTrendingStocks: async (count: number = 5) => {
+    try {
+      const response = await api.get<SearchResult[]>(`/data-service/industry/trending?count=${count}`, {
+        timeout: 30000  // Increase timeout to 30 seconds
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching trending stocks:", error);
       // Return empty array instead of throwing error to prevent dashboard crash
       return [];
     }

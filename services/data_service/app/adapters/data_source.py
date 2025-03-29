@@ -24,3 +24,8 @@ class DataSource(ABC):
     async def search_stocks(self, query: str) -> List[Dict[str, Any]]:
         """Search for stocks by name or ticker"""
         pass
+        
+    @abstractmethod
+    async def get_trending_stocks(self, count: Optional[int] = 5) -> List[Dict[str, Any]]:
+        """Get trending stocks from the data source"""
+        pass

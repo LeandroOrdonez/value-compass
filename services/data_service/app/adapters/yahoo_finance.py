@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import yahooquery as yq
 from typing import List, Dict, Any, Optional
 from datetime import date, datetime, timedelta
 
@@ -108,6 +109,7 @@ class YahooFinanceAdapter(DataSource):
         
         # First, try direct ticker lookup if query looks like a ticker
         if len(query) <= 5 and query.upper() == query:
+            print(f"Direct ticker lookup for {query}")
             try:
                 stock = yf.Ticker(query)
                 info = stock.info
@@ -242,4 +244,81 @@ class YahooFinanceAdapter(DataSource):
         # Sort results by market cap if available
         result = sorted(result, key=lambda x: x.get("market_cap", 0) if x.get("market_cap") else 0, reverse=True)
         
+        return result
+        
+    async def get_trending_stocks(self, count: Optional[int] = 5) -> List[Dict[str, Any]]:
+        """
+        Get trending stocks from Yahoo Finance using yahooquery.
+        
+        Args:
+            count: Number of trending stocks to return (default 5)
+            
+        Returns:
+            List of dictionaries containing trending stock information
+        """
+        result = []
+        try:
+            # Get trending stocks using yahooquery
+            trending_data = yq.get_trending()
+            
+            # Extract quotes from trending data
+            # Yahoo Finance trending data usually returns quotes from US market
+            # We'll take the top quotes from US market (quotes[0])
+            if trending_data and 'quotes' in trending_data and len(trending_data['quotes']) > 0:
+                trending_symbols = [quote['symbol'] for quote in trending_data['quotes']][:count+5]  # Get a few extra in case some fail
+                
+                # Get detailed information for each trending symbol
+                for symbol in trending_symbols:
+                    try:
+                        stock = yf.Ticker(symbol)
+                        info = stock.info
+                        
+                        if info and "symbol" in info:
+                            result.append({
+                                "ticker": info.get("symbol", symbol),
+                                "name": info.get("shortName", ""),
+                                "sector": info.get("sector", ""),
+                                "industry": info.get("industry", ""),
+                                "market_cap": info.get("marketCap", None),
+                                "price": info.get("currentPrice", info.get("regularMarketPrice", None)),
+                                "change_percent": str(round(info.get("regularMarketChangePercent", 0.0), 2)),
+                                "currency": info.get("currency", "USD"),
+                                "is_trending": True
+                            })
+                            
+                            # Stop once we have enough stocks
+                            if len(result) >= count:
+                                break
+                    except Exception as e:
+                        # Skip failed lookups
+                        continue
+        
+        except Exception as e:
+            # If trending fails, fall back to popular tech stocks
+            print(f"Error fetching trending stocks: {e}")
+            fallback_tickers = ["AAPL", "MSFT", "GOOG", "AMZN", "META", "NVDA", "TSLA", "NFLX"]
+            for ticker in fallback_tickers:
+                try:
+                    stock = yf.Ticker(ticker)
+                    info = stock.info
+                    if info and "symbol" in info:
+                        result.append({
+                            "ticker": info.get("symbol", ticker),
+                            "name": info.get("shortName", ""),
+                            "sector": info.get("sector", ""),
+                            "industry": info.get("industry", ""),
+                            "market_cap": info.get("marketCap", None),
+                            "price": info.get("currentPrice", info.get("regularMarketPrice", None)),
+                            "change_percent": str(round(info.get("regularMarketChangePercent", 0.0) * 100, 2)),
+                            "currency": info.get("currency", "USD"),
+                            "is_trending": False  # Mark as not actually trending
+                        })
+                        
+                        # Stop once we have enough stocks
+                        if len(result) >= count:
+                            break
+                except Exception as e:
+                    # Skip failed lookups
+                    continue
+                    
         return result

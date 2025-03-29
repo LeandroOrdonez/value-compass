@@ -4,6 +4,7 @@ pydantic>=1.10.7
 sqlalchemy>=2.0.9
 psycopg2-binary>=2.9.6
 yfinance>=0.2.18
+yahooquery>=2.3.1
 requests>=2.28.2
 python-dotenv>=1.0.0
 python-jose>=3.3.0

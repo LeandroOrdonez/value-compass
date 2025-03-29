@@ -27,12 +27,10 @@ export default function Dashboard() {
           alertService.getTriggeredAlerts()
         ]);
         
-        // Search for some popular stocks to display instead of watchlist
-        // Use a fallback stock list in case the search times out or fails
-        const searchQuery = "tech"; // Example search query for tech stocks
-        let stocksData = await stockService.searchStocks(searchQuery);
+        // Get trending stocks from Yahoo Finance
+        let stocksData = await stockService.getTrendingStocks(5);
         
-        // Fallback data if stock search fails or returns empty results
+        // Fallback data if trending stocks fetch fails or returns empty results
         if (!stocksData || stocksData.length === 0) {
           stocksData = [
             { ticker: "AAPL", name: "Apple Inc.", price: 170.50, change_percent: "0.75" },
@@ -107,10 +105,10 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Watchlist Section */}
+        {/* Trending Stocks Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Watchlist</h2>
+            <h2 className="text-xl font-semibold">Trending</h2>
             <Link href="/stocks" className="text-primary-600 dark:text-primary-400 hover:underline text-sm">
               View All
             </Link>
@@ -143,7 +141,7 @@ export default function Dashboard() {
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">No stocks in your watchlist yet.</p>
+            <p className="text-gray-500 dark:text-gray-400">No trending stocks available. Try again later.</p>
           )}
         </div>
 
