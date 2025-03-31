@@ -25,21 +25,21 @@ export default function StocksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch stock data
+  // Fetch trending stocks data
   useEffect(() => {
     const fetchStocks = async () => {
       try {
         setLoading(true);
         
-        // Use searchStocks with empty query to get a list of stocks
-        const data = await stockService.searchStocks('');
+        // Use getTrendingStocks to get a list of trending stocks
+        const data = await stockService.getTrendingStocks(20); // Get up to 20 trending stocks
         
         // Format the data to match our Stock interface
         const formattedData = data.map((item: any) => ({
           ticker: item.ticker,
           name: item.name || '',
           price: item.price || 0,
-          change_percent: '0.00', // Default value
+          change_percent: item.change_percent || '0.00',
           market_cap: item.market_cap ? `$${(item.market_cap / 1000000000).toFixed(2)}B` : 'N/A',
           pe_ratio: item.pe_ratio,
           sector: item.sector
@@ -55,8 +55,8 @@ export default function StocksPage() {
         
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching stocks:', err);
-        setError('Failed to load stocks. Please try again later.');
+        console.error('Error fetching trending stocks:', err);
+        setError('Failed to load trending stocks. Please try again later.');
         setLoading(false);
       }
     };
@@ -130,7 +130,7 @@ export default function StocksPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Stocks</h1>
+        <h1 className="text-2xl font-bold mb-6">Trending Stocks</h1>
         <div className="animate-pulse">
           <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
@@ -145,7 +145,7 @@ export default function StocksPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Stocks</h1>
+        <h1 className="text-2xl font-bold mb-6">Trending Stocks</h1>
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
           <p>{error}</p>
         </div>
@@ -161,7 +161,7 @@ export default function StocksPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Stocks</h1>
+      <h1 className="text-2xl font-bold mb-6">Trending Stocks</h1>
       
       {/* Search and filter controls */}
       <div className="flex flex-col md:flex-row md:items-center mb-6 gap-4">
