@@ -19,6 +19,7 @@ import stockService, {
   PeerCompany, 
   ValuationScore 
 } from '@/services/stockService';
+import StockDetailSearch from '@/components/StockDetailSearch';
 
 // Register ChartJS components
 ChartJS.register(
@@ -185,6 +186,11 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Stock search component */}
+      <div className="mb-4">
+        <StockDetailSearch className="flex justify-end" />
+      </div>
+      
       {/* Header with company name and key stats */}
       <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">

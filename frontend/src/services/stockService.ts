@@ -117,15 +117,18 @@ const stockService = {
     return response.data;
   },
 
-  searchStocks: async (query: string) => {
+  searchStocks: async (query: string, limit: number = 10) => {
     try {
-      const response = await api.get<SearchResult[]>(`/data-service/industry/search?query=${encodeURIComponent(query)}`, {
-        timeout: 30000  // Increase timeout to 30 seconds
-      });
+      const response = await api.get<SearchResult[]>(
+        `/data-service/industry/search?query=${encodeURIComponent(query)}&limit=${limit}`, 
+        {
+          timeout: 15000  // 15 seconds should be sufficient for search
+        }
+      );
       return response.data;
     } catch (error) {
       console.error("Error searching stocks:", error);
-      // Return empty array instead of throwing error to prevent dashboard crash
+      // Return empty array instead of throwing error to prevent UI crashes
       return [];
     }
   },

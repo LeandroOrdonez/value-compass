@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import stockService from '@/services/stockService';
+import StockSearch from '@/components/StockSearch';
 
 interface Stock {
   ticker: string;
@@ -165,22 +166,28 @@ export default function StocksPage() {
       
       {/* Search and filter controls */}
       <div className="flex flex-col md:flex-row md:items-center mb-6 gap-4">
-        <div className="relative w-full md:w-1/3">
-          <input
-            type="text"
-            placeholder="Search by ticker or name..."
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+        <div className="w-full md:w-1/3">
+          <StockSearch 
+            onSelect={(stock) => {
+              // If the stock isn't already in the list, add it
+              if (!stocks.some(s => s.ticker === stock.ticker)) {
+                const newStock = {
+                  ticker: stock.ticker,
+                  name: stock.name || '',
+                  price: stock.price || 0,
+                  change_percent: stock.change_percent || '0.00',
+                  market_cap: stock.market_cap ? `$${(stock.market_cap / 1000000000).toFixed(2)}B` : 'N/A',
+                  pe_ratio: stock.pe_ratio || null,
+                  sector: stock.sector || null
+                };
+                setStocks(prev => [...prev, newStock]);
+              }
+              
+              // Set search term to filter to this stock
+              setSearchTerm(stock.ticker);
+            }}
+            placeholder="Search for a stock..."
           />
-          {searchTerm && (
-            <button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-              onClick={() => setSearchTerm('')}
-            >
-              ×
-            </button>
-          )}
         </div>
         
         <div className="w-full md:w-auto">

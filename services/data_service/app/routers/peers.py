@@ -21,12 +21,24 @@ async def get_industry_peers(industry: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to retrieve peer companies: {str(e)}")
 
 @router.get("/search", response_model=List[Dict[str, Any]])
-async def search_stocks(query: str, db: Session = Depends(get_db)):
-    """Search for stocks by name or ticker"""
+async def search_stocks(
+    query: str, 
+    limit: Optional[int] = Query(10, description="Maximum number of results to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Search for stocks by name or ticker.
+    
+    This endpoint uses yahooquery to search for stocks and provides autocomplete functionality.
+    """
     try:
         # Get data from the adapter
         data_source = get_data_source()
         data = await data_source.search_stocks(query)
+        
+        # Limit results if specified
+        if limit and len(data) > limit:
+            data = data[:limit]
         
         return data
     
