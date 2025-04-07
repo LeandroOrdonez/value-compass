@@ -6,6 +6,16 @@ export interface Portfolio {
   description: string | null;
   created_at: string;
   updated_at: string;
+  total_value?: number;
+  daily_change?: number;
+  stocks_count?: number;
+  performance?: {
+    day: number;
+    week: number;
+    month: number;
+    year: number;
+    all_time: number;
+  };
 }
 
 export interface PortfolioHolding {
@@ -15,6 +25,13 @@ export interface PortfolioHolding {
   cost_basis: number | null;
   purchase_date: string | null;
   notes: string | null;
+  current_price?: number;
+  current_value?: number;
+  change_percent?: number;
+  change_value?: number;
+  weight?: number; // percent of portfolio
+  name?: string;
+  sector?: string;
 }
 
 export interface CreatePortfolioData {
