@@ -336,7 +336,9 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
             )}
           </div>
           <div className="mt-4 md:mt-0">
-            <div className="text-3xl font-bold">${portfolio.total_value?.toLocaleString()}</div>
+            <div className="text-3xl font-bold">
+              {portfolio.total_value != null ? `$${portfolio.total_value.toLocaleString()}` : 'N/A'}
+            </div>
             <div className={`text-right ${(portfolio.daily_change || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {(portfolio.daily_change || 0) >= 0 ? '▲' : '▼'} {Math.abs(portfolio.daily_change || 0).toFixed(2)}% today
             </div>
@@ -348,31 +350,31 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
             <p className="text-gray-500 dark:text-gray-400 text-sm">Today</p>
             <p className={`text-lg font-semibold ${(portfolio.performance?.day || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {(portfolio.performance?.day || 0) >= 0 ? '+' : ''}{portfolio.performance?.day.toFixed(2)}%
+              {(portfolio.performance?.day || 0) >= 0 ? '+' : ''}{portfolio.performance?.day?.toFixed(2) || '0.00'}%
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
             <p className="text-gray-500 dark:text-gray-400 text-sm">Week</p>
             <p className={`text-lg font-semibold ${(portfolio.performance?.week || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {(portfolio.performance?.week || 0) >= 0 ? '+' : ''}{portfolio.performance?.week.toFixed(2)}%
+              {(portfolio.performance?.week || 0) >= 0 ? '+' : ''}{portfolio.performance?.week?.toFixed(2) || '0.00'}%
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
             <p className="text-gray-500 dark:text-gray-400 text-sm">Month</p>
             <p className={`text-lg font-semibold ${(portfolio.performance?.month || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {(portfolio.performance?.month || 0) >= 0 ? '+' : ''}{portfolio.performance?.month.toFixed(2)}%
+              {(portfolio.performance?.month || 0) >= 0 ? '+' : ''}{portfolio.performance?.month?.toFixed(2) || '0.00'}%
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
             <p className="text-gray-500 dark:text-gray-400 text-sm">Year</p>
             <p className={`text-lg font-semibold ${(portfolio.performance?.year || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {(portfolio.performance?.year || 0) >= 0 ? '+' : ''}{portfolio.performance?.year.toFixed(2)}%
+              {(portfolio.performance?.year || 0) >= 0 ? '+' : ''}{portfolio.performance?.year?.toFixed(2) || '0.00'}%
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
             <p className="text-gray-500 dark:text-gray-400 text-sm">All Time</p>
             <p className={`text-lg font-semibold ${(portfolio.performance?.all_time || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {(portfolio.performance?.all_time || 0) >= 0 ? '+' : ''}{portfolio.performance?.all_time.toFixed(2)}%
+              {(portfolio.performance?.all_time || 0) >= 0 ? '+' : ''}{portfolio.performance?.all_time?.toFixed(2) || '0.00'}%
             </p>
           </div>
         </div>

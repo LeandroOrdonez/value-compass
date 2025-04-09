@@ -68,6 +68,13 @@ export interface ValuationScore {
   score_components: Record<string, number>;
 }
 
+export interface StockDetails extends StockFinancialData {
+  current_price: number | null;
+  previous_close: number | null;
+  change_percent: string | null;
+  last_updated: string;
+}
+
 const stockService = {
   getHistoricalData: async (ticker: string, startDate?: string, endDate?: string) => {
     let url = `/data-service/stocks/${ticker}/historical`;
@@ -143,6 +150,45 @@ const stockService = {
       console.error("Error fetching trending stocks:", error);
       // Return empty array instead of throwing error to prevent dashboard crash
       return [];
+    }
+  },
+
+  getStockDetails: async (ticker: string) => {
+    try {
+      // First, try to get financial data which includes most details
+      const financialData = await stockService.getFinancialData(ticker);
+      
+      // For price data, we need to get the latest price from historical data
+      const historicalData = await stockService.getHistoricalData(ticker);
+      
+      // Get the most recent closing price and calculate change percentage
+      let currentPrice = null;
+      let changePercent = null;
+      let previousClose = null;
+      
+      if (historicalData && historicalData.length > 1) {
+        const latestData = historicalData[historicalData.length - 1];
+        const previousData = historicalData[historicalData.length - 2];
+        
+        currentPrice = latestData.close;
+        previousClose = previousData.close;
+        
+        // Calculate change percentage
+        if (previousClose > 0) {
+          changePercent = ((currentPrice - previousClose) / previousClose * 100).toFixed(2);
+        }
+      }
+      
+      return {
+        ...financialData,
+        current_price: currentPrice,
+        previous_close: previousClose,
+        change_percent: changePercent,
+        last_updated: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error fetching stock details:", error);
+      throw error;
     }
   },
 };

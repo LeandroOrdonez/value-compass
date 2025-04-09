@@ -10,9 +10,9 @@ interface Portfolio {
   description: string | null;
   created_at: string;
   updated_at: string;
-  total_value: number;
-  daily_change: number;
-  stocks_count: number;
+  total_value?: number | null;
+  daily_change?: number | null;
+  stocks_count?: number | null;
 }
 
 export default function PortfoliosPage() {
@@ -130,17 +130,25 @@ export default function PortfoliosPage() {
                 )}
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-600 dark:text-gray-400">Total Value:</span>
-                  <span className="font-medium">${portfolio.total_value.toLocaleString()}</span>
+                  <span className="font-medium">
+                    {portfolio.total_value != null ? 
+                      `$${portfolio.total_value.toLocaleString()}` : 
+                      'N/A'}
+                  </span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-600 dark:text-gray-400">Daily Change:</span>
-                  <span className={`font-medium ${portfolio.daily_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {portfolio.daily_change >= 0 ? '+' : ''}{portfolio.daily_change.toFixed(2)}%
+                  <span className={`font-medium ${(portfolio.daily_change || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {portfolio.daily_change != null ? 
+                      `${portfolio.daily_change >= 0 ? '+' : ''}${portfolio.daily_change.toFixed(2)}%` : 
+                      'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between mb-4">
                   <span className="text-gray-600 dark:text-gray-400">Stocks:</span>
-                  <span className="font-medium">{portfolio.stocks_count}</span>
+                  <span className="font-medium">
+                    {portfolio.stocks_count != null ? portfolio.stocks_count : 'N/A'}
+                  </span>
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   Updated {new Date(portfolio.updated_at).toLocaleDateString()}
