@@ -21,6 +21,13 @@ export default function ReportsPage() {
       try {
         setLoading(true);
         
+        // Check if user is authenticated
+        if (!localStorage.getItem('token')) {
+          setError('Please sign in to view reports.');
+          setLoading(false);
+          return;
+        }
+        
         // Fetch data in parallel
         const [reportsData, portfoliosData, basketsData] = await Promise.all([
           reportService.getReports(),

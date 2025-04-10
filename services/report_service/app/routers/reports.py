@@ -89,6 +89,15 @@ async def list_reports(
     
     result = []
     for report in reports:
+        # Create file URL and determine status
+        file_url = None
+        status = "pending"
+        
+        if report.file_path and os.path.exists(report.file_path):
+            file_name = os.path.basename(report.file_path)
+            file_url = f"/report-files/{file_name}"
+            status = "completed"
+        
         result.append({
             "id": report.id,
             "title": report.title,
@@ -96,7 +105,12 @@ async def list_reports(
             "report_type": report.report_type,
             "generated_at": report.generated_at,
             "portfolio_id": report.portfolio_id,
-            "basket_id": report.basket_id
+            "basket_id": report.basket_id,
+            "file_url": file_url,
+            "status": status,
+            "type": "portfolio" if report.portfolio_id else "basket",
+            "target_id": report.portfolio_id if report.portfolio_id else report.basket_id,
+            "created_at": report.generated_at.isoformat() if report.generated_at else None
         })
     
     return result
@@ -111,7 +125,9 @@ async def view_report(report_id: int, db: Session = Depends(get_db)):
     if not os.path.exists(report.file_path):
         raise HTTPException(status_code=404, detail="Report file not found")
     
-    return FileResponse(report.file_path, media_type="text/html")
+    # The file path is relative to 'reports' directory
+    file_name = os.path.basename(report.file_path)
+    return {"file_url": f"/report-files/{file_name}", "status": "completed"}
 
 @router.delete("/delete/{report_id}", response_model=Dict[str, str])
 async def delete_report(report_id: int, db: Session = Depends(get_db)):

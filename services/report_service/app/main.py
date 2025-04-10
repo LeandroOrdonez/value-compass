@@ -29,7 +29,7 @@ app.add_middleware(
 os.makedirs("reports", exist_ok=True)
 
 # Serve static files (generated reports)
-app.mount("/reports", StaticFiles(directory="reports"), name="reports")
+app.mount("/report-files", StaticFiles(directory="reports"), name="report_files")
 
 # Include routers
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])

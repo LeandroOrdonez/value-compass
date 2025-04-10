@@ -33,13 +33,28 @@ def start_scheduler():
         
         scheduler = AsyncIOScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
         
-        # Add scheduled jobs
-        scheduler.add_job(schedule_daily_tasks, 'cron', hour=0, minute=0, id='daily_scheduler')
-        scheduler.add_job(check_price_alerts, 'interval', minutes=15, id='price_alerts')
-        scheduler.add_job(check_valuation_score_alerts, 'cron', hour=8, minute=0, id='valuation_alerts')
-        
+        # Start scheduler before adding jobs
         scheduler.start()
-        print("Scheduler started.")
+        
+        # Add or update scheduled jobs
+        try:
+            # Remove existing jobs if they exist
+            try:
+                scheduler.remove_job('daily_scheduler')
+                scheduler.remove_job('price_alerts')
+                scheduler.remove_job('valuation_alerts')
+            except:
+                pass  # Job doesn't exist, which is fine
+            
+            # Add scheduled jobs
+            scheduler.add_job(schedule_daily_tasks, 'cron', hour=0, minute=0, id='daily_scheduler', replace_existing=True)
+            scheduler.add_job(check_price_alerts, 'interval', minutes=15, id='price_alerts', replace_existing=True)
+            scheduler.add_job(check_valuation_score_alerts, 'cron', hour=8, minute=0, id='valuation_alerts', replace_existing=True)
+            
+            print("Scheduler started and jobs added.")
+        except Exception as e:
+            print(f"Error adding jobs to scheduler: {e}")
+            # Continue even if there was an error adding jobs
     
 def shutdown_scheduler():
     """Shut down the APScheduler"""

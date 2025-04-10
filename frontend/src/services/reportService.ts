@@ -18,8 +18,22 @@ export interface ReportRequest {
 
 const reportService = {
   getReports: async () => {
-    const response = await api.get<Report[]>('/report-service/reports');
-    return response.data;
+    try {
+      // First try to get the current user from the API
+      const userResponse = await api.get('/user-service/users/me');
+      const userId = userResponse.data.id;
+      
+      // Then fetch reports with the user ID - use report-service path instead of direct /reports
+      const response = await api.get<Report[]>('/report-service/reports/list', {
+        params: {
+          user_id: userId
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      return []; // Return empty array if not authenticated or error occurs
+    }
   },
 
   getReport: async (reportId: number) => {
@@ -48,18 +62,15 @@ const reportService = {
   },
 
   downloadReport: async (reportId: number) => {
-    const response = await api.get<Blob>(`/report-service/reports/${reportId}/download`, {
-      responseType: 'blob',
-    });
+    // First get the report details with file URL
+    const report = await api.get<Report>(`/report-service/reports/view/${reportId}`);
     
-    // Create a URL for the blob and trigger download
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `report-${reportId}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
+    if (!report.data.file_url) {
+      throw new Error('Report file is not available');
+    }
+    
+    // Create a link to the file URL and trigger download
+    window.open(report.data.file_url, '_blank');
   },
 
   deleteReport: async (reportId: number) => {
