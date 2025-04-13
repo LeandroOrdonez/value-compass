@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Value Compass - Stock Valuation & Analysis Tool',
   description: 'A stock valuation and analysis tool that helps users identify undervalued stocks',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({

@@ -35,7 +35,12 @@ export default function ReportsPage() {
           basketService.getBaskets()
         ]);
         
-        setReports(reportsData);
+        // Ensure all reports have valid IDs
+        const validReports = reportsData.filter(report => report && report.id);
+        if (validReports.length !== reportsData.length) {
+          console.warn('Some reports were missing IDs and were filtered out');
+        }
+        setReports(validReports);
         setPortfolios(portfoliosData);
         setBaskets(basketsData);
         
@@ -69,6 +74,12 @@ export default function ReportsPage() {
         newReport = await reportService.generatePortfolioReport(selectedTargetId, reportTitle || undefined);
       } else {
         newReport = await reportService.generateBasketReport(selectedTargetId, reportTitle || undefined);
+      }
+      
+      // Make sure the new report has an ID (use a temporary one if needed)
+      if (!newReport.id) {
+        console.log('Warning: New report missing ID, using temporary ID');
+        newReport = {...newReport, id: Date.now()}; // Use timestamp as temp ID
       }
       
       setReports([newReport, ...reports]);

@@ -14,6 +14,9 @@ export interface ReportRequest {
   title: string;
   type: 'portfolio' | 'basket';
   target_id: number;
+  user_id: number;
+  portfolio_id?: number;
+  basket_id?: number;
 }
 
 const reportService = {
@@ -42,23 +45,45 @@ const reportService = {
   },
 
   generatePortfolioReport: async (portfolioId: number, title?: string) => {
-    const data: ReportRequest = {
-      title: title || `Portfolio Report ${new Date().toISOString().split('T')[0]}`,
-      type: 'portfolio',
-      target_id: portfolioId,
-    };
-    const response = await api.post<Report>('/report-service/reports/generate', data);
-    return response.data;
+    try {
+      // First get the current user ID
+      const userResponse = await api.get('/user-service/users/me');
+      const userId = userResponse.data.id;
+      
+      const data = {
+        title: title || `Portfolio Report ${new Date().toISOString().split('T')[0]}`,
+        type: 'portfolio',
+        target_id: portfolioId,
+        user_id: userId,
+        portfolio_id: portfolioId
+      };
+      const response = await api.post<Report>('/report-service/reports/generate', data);
+      return response.data;
+    } catch (error) {
+      console.error('Error generating portfolio report:', error);
+      throw error;
+    }
   },
 
   generateBasketReport: async (basketId: number, title?: string) => {
-    const data: ReportRequest = {
-      title: title || `Basket Report ${new Date().toISOString().split('T')[0]}`,
-      type: 'basket',
-      target_id: basketId,
-    };
-    const response = await api.post<Report>('/report-service/reports/generate', data);
-    return response.data;
+    try {
+      // First get the current user ID
+      const userResponse = await api.get('/user-service/users/me');
+      const userId = userResponse.data.id;
+      
+      const data = {
+        title: title || `Basket Report ${new Date().toISOString().split('T')[0]}`,
+        type: 'basket',
+        target_id: basketId,
+        user_id: userId,
+        basket_id: basketId
+      };
+      const response = await api.post<Report>('/report-service/reports/generate', data);
+      return response.data;
+    } catch (error) {
+      console.error('Error generating basket report:', error);
+      throw error;
+    }
   },
 
   downloadReport: async (reportId: number) => {
@@ -74,7 +99,7 @@ const reportService = {
   },
 
   deleteReport: async (reportId: number) => {
-    await api.delete(`/report-service/reports/${reportId}`);
+    await api.delete(`/report-service/reports/delete/${reportId}`);
   },
 };
 

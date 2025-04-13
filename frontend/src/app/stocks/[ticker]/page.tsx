@@ -9,7 +9,7 @@ import {
   PointElement,
   LineElement,
   Title,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   Filler,
 } from 'chart.js';
@@ -19,6 +19,7 @@ import stockService, {
   PeerCompany, 
   ValuationScore 
 } from '@/services/stockService';
+import portfolioService, { Portfolio, CreateHoldingData } from '@/services/portfolioService';
 import StockDetailSearch from '@/components/StockDetailSearch';
 
 // Register ChartJS components
@@ -28,7 +29,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   Title,
-  Tooltip,
+  ChartTooltip,
   Legend,
   Filler
 );
@@ -43,7 +44,92 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
   const [timeframe, setTimeframe] = useState<'1m' | '3m' | '6m' | '1y' | '5y'>('1y');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Portfolio management states
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
+  const [shares, setShares] = useState<number>(1);
+  const [costBasis, setCostBasis] = useState<number | undefined>(undefined);
+  const [purchaseDate, setPurchaseDate] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
+  const [addingToPortfolio, setAddingToPortfolio] = useState(false);
+  const [addStockError, setAddStockError] = useState<string | null>(null);
 
+  // Function to fetch user portfolios
+  const fetchPortfolios = async () => {
+    try {
+      const portfoliosData = await portfolioService.getPortfolios();
+      setPortfolios(portfoliosData);
+      
+      // Set default selected portfolio if available
+      if (portfoliosData.length > 0 && !selectedPortfolioId) {
+        setSelectedPortfolioId(portfoliosData[0].id);
+      } else if (portfoliosData.length === 0) {
+        setAddStockError("You don't have any portfolios yet. Please create a portfolio first.");
+      }
+    } catch (err) {
+      console.error('Error fetching portfolios:', err);
+      setAddStockError('Failed to load portfolios. Please try again.');
+    }
+  };
+  
+  // Function to handle opening the add to portfolio modal
+  const handleAddToPortfolio = async () => {
+    // Reset form state
+    setShares(1);
+    setCostBasis(historicalData.length > 0 ? historicalData[historicalData.length - 1].close : undefined);
+    setPurchaseDate(new Date().toISOString().split('T')[0]);
+    setNotes('');
+    setAddStockError(null);
+    
+    // Fetch portfolios
+    await fetchPortfolios();
+    
+    // Show modal
+    setShowPortfolioModal(true);
+  };
+  
+  // Function to handle adding stock to portfolio
+  const handleSubmitAddToPortfolio = async () => {
+    if (!selectedPortfolioId) {
+      setAddStockError('Please select a portfolio');
+      return;
+    }
+    
+    if (shares <= 0) {
+      setAddStockError('Shares must be greater than 0');
+      return;
+    }
+    
+    try {
+      setAddingToPortfolio(true);
+      setAddStockError(null);
+      
+      const holdingData: CreateHoldingData = {
+        ticker,
+        shares,
+        cost_basis: costBasis,
+        purchase_date: purchaseDate || undefined,
+        notes: notes || undefined
+      };
+      
+      await portfolioService.addHolding(selectedPortfolioId, holdingData);
+      
+      // Success
+      setAddingToPortfolio(false);
+      setShowPortfolioModal(false);
+      
+      // Show success message (could use a toast notification here)
+      alert(`Successfully added ${shares} shares of ${ticker} to your portfolio`);
+      
+    } catch (err) {
+      console.error('Error adding stock to portfolio:', err);
+      setAddStockError('Failed to add stock to portfolio. Please try again.');
+      setAddingToPortfolio(false);
+    }
+  };
+  
   useEffect(() => {
     const fetchStockData = async () => {
       try {
@@ -218,28 +304,68 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
         
         {/* Key financial metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Market Cap</p>
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded relative group">
+            <div className="flex items-center">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Market Cap</p>
+              <div className="relative ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                  Total value of all outstanding shares. Calculated as the current share price multiplied by the total number of shares.
+                </div>
+              </div>
+            </div>
             <p className="text-lg font-semibold">
               {financialData?.market_cap 
                 ? `$${(financialData.market_cap / 1000000000).toFixed(2)}B` 
                 : 'N/A'}
             </p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">P/E Ratio</p>
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded relative group">
+            <div className="flex items-center">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">P/E Ratio</p>
+              <div className="relative ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                  Price-to-Earnings ratio. Measures the company's current share price relative to its earnings per share (EPS). Lower values may indicate undervaluation.
+                </div>
+              </div>
+            </div>
             <p className="text-lg font-semibold">{financialData?.pe_ratio?.toFixed(2) || 'N/A'}</p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Dividend Yield</p>
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded relative group">
+            <div className="flex items-center">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Dividend Yield</p>
+              <div className="relative ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                  Annual dividend payments as a percentage of the share price. Higher yields may indicate better value for income-focused investors.
+                </div>
+              </div>
+            </div>
             <p className="text-lg font-semibold">
               {financialData?.dividend_yield 
                 ? `${(financialData.dividend_yield * 100).toFixed(2)}%` 
                 : 'N/A'}
             </p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Value Score</p>
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded relative group">
+            <div className="flex items-center">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Value Score</p>
+              <div className="relative ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                  Our proprietary score based on multiple financial metrics. Higher scores (closer to 100) suggest better value investment opportunities.
+                </div>
+              </div>
+            </div>
             <p className="text-lg font-semibold">
               {valuationScore ? valuationScore.score.toFixed(2) : 'N/A'}
             </p>
@@ -284,12 +410,32 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
           <h2 className="text-xl font-semibold mb-4">Financial Metrics</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">EPS</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">EPS</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Earnings Per Share. The portion of a company's profit allocated to each outstanding share of common stock. Higher is generally better.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">${financialData?.eps?.toFixed(2) || 'N/A'}</p>
               </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Revenue</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Revenue</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Total income from sales of goods and services before expenses. Measures the company's top-line growth.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">
                   {financialData?.revenue 
                     ? `$${(financialData.revenue / 1000000000).toFixed(2)}B` 
@@ -298,16 +444,36 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Profit Margin</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Profit Margin</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Net income as a percentage of revenue. Measures the company's profitability and operational efficiency. Higher margins indicate better profitability.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">
                   {financialData?.profit_margin 
                     ? `${(financialData.profit_margin * 100).toFixed(2)}%` 
                     : 'N/A'}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">ROE</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">ROE</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Return on Equity. Measures how efficiently a company uses its equity to generate profits. Higher ROE generally indicates better management effectiveness.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">
                   {financialData?.roe 
                     ? `${(financialData.roe * 100).toFixed(2)}%` 
@@ -316,12 +482,32 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Debt to Equity</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Debt to Equity</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Ratio of total debt to shareholders' equity. Measures financial leverage. Lower ratios indicate less financial risk.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">{financialData?.debt_to_equity?.toFixed(2) || 'N/A'}</p>
               </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Current Ratio</p>
+              <div className="relative group">
+                <div className="flex items-center">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Current Ratio</p>
+                  <div className="relative ml-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-5 text-gray-600 dark:text-gray-300">
+                      Ratio of current assets to current liabilities. Measures a company's ability to pay short-term obligations. Ratios above 1.0 indicate good short-term financial strength.
+                    </div>
+                  </div>
+                </div>
                 <p className="font-medium">{financialData?.current_ratio?.toFixed(2) || 'N/A'}</p>
               </div>
             </div>
@@ -370,27 +556,59 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
       {valuationScore && (
         <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Valuation Score Breakdown</h2>
-          <p className="mb-4">
-            Overall Score: <span className="font-bold">{valuationScore.score.toFixed(2)}</span> 
-            using rule: <span className="font-medium">{valuationScore.rule_name}</span>
-          </p>
+          <div className="flex items-center mb-4">
+            <p className="mr-4">
+              <span className="text-gray-600 dark:text-gray-400">Overall Score:</span> 
+              <span className="ml-2 text-2xl font-bold text-primary-600 dark:text-primary-400">{valuationScore.score.toFixed(2)}</span>
+            </p>
+            <div className="relative group">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 left-0 top-6 text-gray-600 dark:text-gray-300">
+                Our proprietary valuation score based on the "{valuationScore.rule_name}" valuation model. Scores range from 0-100 with higher scores indicating potentially undervalued stocks.
+              </div>
+            </div>
+          </div>
           
           {Object.entries(valuationScore.score_components).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(valuationScore.score_components).map(([component, score]) => (
-                <div key={component} className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{component}</p>
-                  <div className="flex items-center mt-2">
+              {Object.entries(valuationScore.score_components).map(([component, score]) => {
+                // Convert component from code notation (pe_ratio) to readable format (P/E Ratio)
+                const readableComponent = component
+                  .split('_')
+                  .map(word => word === 'pe' ? 'P/E' : word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+                
+                // Determine color based on score (red to green gradient)
+                const scoreColor = score >= 70 ? 'bg-green-500' : 
+                                   score >= 50 ? 'bg-blue-500' : 
+                                   score >= 30 ? 'bg-yellow-500' : 
+                                   'bg-red-500';
+                
+                return (
+                  <div key={component} className="bg-gray-50 dark:bg-gray-700 p-4 rounded relative group">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium">{readableComponent} Score</p>
+                      <span className="font-bold">{score.toFixed(1)}</span>
+                    </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
                       <div 
-                        className="bg-primary-600 h-2.5 rounded-full" 
-                        style={{ width: `${Math.min(100, Math.max(0, score * 10))}%` }}
+                        className={`${scoreColor} h-2.5 rounded-full transition-all duration-500`} 
+                        style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
                       ></div>
                     </div>
-                    <span className="ml-2 font-medium">{score.toFixed(1)}</span>
+                    <div className="absolute z-10 w-64 p-2 -mt-1 text-sm bg-white dark:bg-gray-800 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-300 border border-gray-200 dark:border-gray-700 right-0 top-0 text-gray-600 dark:text-gray-300">
+                      {component === 'pe_ratio' && 'Price-to-Earnings ratio. Lower values typically indicate better value.'}
+                      {component === 'pb_ratio' && 'Price-to-Book ratio. Compares market value to book value. Lower values may indicate undervaluation.'}
+                      {component === 'dividend_yield' && 'Annual dividend as percentage of share price. Higher yields provide income and can indicate value.'}
+                      {component === 'debt_to_equity' && 'Ratio of total debt to shareholders\' equity. Lower values indicate less financial risk.'}
+                      {component === 'profit_margin' && 'Net income as percentage of revenue. Higher margins indicate better profitability.'}
+                      {component === 'roe' && 'Return on Equity. Measures how efficiently a company uses equity to generate profits.'}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400">No score component details available</p>
@@ -400,7 +618,10 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
       
       {/* Actions */}
       <div className="mt-8 flex flex-wrap gap-4">
-        <button className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded flex items-center">
+        <button 
+          onClick={handleAddToPortfolio}
+          className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-4 rounded flex items-center"
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
@@ -419,6 +640,180 @@ export default function StockDetailPage({ params }: { params: { ticker: string }
           Generate Report
         </button>
       </div>
+      
+      {/* Add to Portfolio Modal */}
+      {showPortfolioModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 relative">
+            <button 
+              onClick={() => setShowPortfolioModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h2 className="text-xl font-semibold mb-4">Add {ticker} to Portfolio</h2>
+            
+            {/* Error message */}
+            {addStockError && (
+              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-300">
+                {addStockError}
+              </div>
+            )}
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmitAddToPortfolio();
+            }}>
+              {/* Portfolio selection */}
+              <div className="mb-4">
+                <label htmlFor="portfolio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Select Portfolio
+                </label>
+                <select
+                  id="portfolio"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700"
+                  value={selectedPortfolioId || ''}
+                  onChange={(e) => setSelectedPortfolioId(Number(e.target.value))}
+                  disabled={portfolios.length === 0}
+                  required
+                >
+                  {portfolios.length === 0 ? (
+                    <option value="">No portfolios available</option>
+                  ) : (
+                    portfolios.map(portfolio => (
+                      <option key={portfolio.id} value={portfolio.id}>
+                        {portfolio.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                
+                {portfolios.length === 0 && (
+                  <a 
+                    href="/portfolios/create" 
+                    className="text-primary-600 dark:text-primary-400 hover:underline text-sm inline-block mt-2"
+                  >
+                    Create a new portfolio
+                  </a>
+                )}
+              </div>
+              
+              {/* Shares */}
+              <div className="mb-4">
+                <label htmlFor="shares" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Number of Shares
+                </label>
+                <input
+                  id="shares"
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700"
+                  value={shares}
+                  onChange={(e) => setShares(Number(e.target.value))}
+                  required
+                />
+              </div>
+              
+              {/* Cost basis */}
+              <div className="mb-4">
+                <label htmlFor="costBasis" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Cost Basis ($ per share)
+                </label>
+                <input
+                  id="costBasis"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700"
+                  value={costBasis}
+                  onChange={(e) => setCostBasis(Number(e.target.value))}
+                  placeholder="Current price if not specified"
+                />
+                {historicalData.length > 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Current Price: ${historicalData[historicalData.length - 1].close.toFixed(2)}
+                  </p>
+                )}
+              </div>
+              
+              {/* Purchase date */}
+              <div className="mb-4">
+                <label htmlFor="purchaseDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Purchase Date
+                </label>
+                <input
+                  id="purchaseDate"
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700"
+                  value={purchaseDate}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                />
+              </div>
+              
+              {/* Notes */}
+              <div className="mb-6">
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  id="notes"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any notes about this investment..."
+                />
+              </div>
+              
+              {/* Total value calculation */}
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md mb-6">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Investment Value:</p>
+                  <p className="text-lg font-semibold">
+                    ${((costBasis || (historicalData.length > 0 ? historicalData[historicalData.length - 1].close : 0)) * shares).toFixed(2)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Number of Shares:</p>
+                  <p className="text-lg font-semibold">{shares}</p>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPortfolioModal(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md flex items-center"
+                  disabled={addingToPortfolio || portfolios.length === 0}
+                >
+                  {addingToPortfolio ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Adding...
+                    </>
+                  ) : (
+                    'Add to Portfolio'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
