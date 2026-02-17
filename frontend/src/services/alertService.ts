@@ -26,20 +26,14 @@ export interface UpdateAlertData {
 
 const alertService = {
   getAlerts: async () => {
-    // Get the current user ID from localStorage or auth context
-    const userStr = localStorage.getItem('user');
+    // Get the current user ID from the API
     let userId = null;
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        userId = user.id;
-      } catch (e) {
-        console.error('Failed to parse user data:', e);
-      }
-    }
-    
-    if (!userId) {
-      return []; // Return empty array if no user is logged in
+    try {
+      const userResponse = await api.get('/user-service/users/me');
+      userId = userResponse.data.id;
+    } catch (e) {
+      console.error('Failed to fetch current user:', e);
+      return []; // Return empty array if not authenticated
     }
     
     const response = await api.get<any[]>(`/report-service/alerts/list?user_id=${userId}`);
@@ -70,19 +64,12 @@ const alertService = {
   },
 
   createAlert: async (data: CreateAlertData) => {
-    // Get the current user ID from localStorage or auth context
-    const userStr = localStorage.getItem('user');
+    // Get the current user ID from the API
     let userId = null;
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        userId = user.id;
-      } catch (e) {
-        console.error('Failed to parse user data:', e);
-      }
-    }
-    
-    if (!userId) {
+    try {
+      const userResponse = await api.get('/user-service/users/me');
+      userId = userResponse.data.id;
+    } catch (e) {
       throw new Error('User must be logged in to create alerts');
     }
     
@@ -132,20 +119,14 @@ const alertService = {
   },
 
   getTriggeredAlerts: async () => {
-    // Get the current user ID from localStorage or auth context
-    const userStr = localStorage.getItem('user');
+    // Get the current user ID from the API
     let userId = null;
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        userId = user.id;
-      } catch (e) {
-        console.error('Failed to parse user data:', e);
-      }
-    }
-    
-    if (!userId) {
-      return []; // Return empty array if no user is logged in
+    try {
+      const userResponse = await api.get('/user-service/users/me');
+      userId = userResponse.data.id;
+    } catch (e) {
+      console.error('Failed to fetch current user:', e);
+      return []; // Return empty array if not authenticated
     }
     
     // Use the correct endpoint with user ID and filter alerts that have been triggered

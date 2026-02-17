@@ -2,7 +2,7 @@ from app.services.data_client import DataServiceClient
 from app.services.valuation_client import ValuationServiceClient
 from app.database.database import SessionLocal
 from app.models.models import Alert, NotificationLog
-from datetime import datetime
+from datetime import datetime, timedelta
 
 async def check_price_alerts():
     """Check for price-based alerts that need to be triggered"""

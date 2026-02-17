@@ -70,11 +70,20 @@ const basketService = {
   },
 
   getValuationScores: async (basketId: number, ruleId?: number) => {
+    // First fetch the basket's stocks to get tickers
+    const stocks = await basketService.getStocks(basketId);
+    const tickers = stocks.map((s: BasketStock) => s.ticker);
+
+    if (tickers.length === 0) {
+      return [];
+    }
+
+    // Use the batch valuation endpoint with the tickers
     const params: Record<string, string> = {};
     if (ruleId) {
       params.rule_id = ruleId.toString();
     }
-    const response = await api.get(`/valuation-service/valuation/basket/${basketId}`, { params });
+    const response = await api.post('/valuation-service/valuation/batch', tickers, { params });
     return response.data;
   },
 };

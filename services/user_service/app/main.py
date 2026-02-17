@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import users, auth, portfolio, baskets
+from app.routers import users, auth, portfolio, baskets, internal
 from app.database.database import engine, Base
 
 # Create database tables
@@ -27,6 +27,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(portfolio.router, prefix="/users", tags=["Portfolio"])
 app.include_router(baskets.router, prefix="/users", tags=["Baskets"])
+app.include_router(internal.router, prefix="/internal", tags=["Internal (Service-to-Service)"])
 
 @app.get("/", tags=["Root"])
 async def read_root():
