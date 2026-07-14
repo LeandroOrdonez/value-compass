@@ -95,7 +95,8 @@ const reportService = {
     }
     
     // Create a link to the file URL and trigger download
-    window.open(report.data.file_url, '_blank');
+    const reportUrl = new URL(report.data.file_url, api.defaults.baseURL).toString();
+    window.open(reportUrl, '_blank', 'noopener,noreferrer');
   },
 
   deleteReport: async (reportId: number) => {

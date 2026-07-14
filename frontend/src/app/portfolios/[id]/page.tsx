@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import Link from 'next/link';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
@@ -36,7 +36,7 @@ interface PerformanceData {
   values: number[];
 }
 
-export default function PortfolioDetailPage({ params }: { params: { id: string } }) {
+export default function PortfolioDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const portfolioId = parseInt(resolvedParams.id);
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
@@ -47,105 +47,190 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'performance' | 'holdings' | 'breakdown'>('performance');
   
-  useEffect(() => {
-    const fetchPortfolioData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch basic portfolio data
-        const portfolioData = await portfolioService.getPortfolio(portfolioId);
-        
-        // Add mock data for demo purposes
-        const enhancedPortfolio: Portfolio = {
-          ...portfolioData,
-          total_value: 125630.42,
-          daily_change: 1.23,
-          stocks_count: 8,
-          performance: {
-            day: 1.23,
-            week: 2.45,
-            month: -0.89,
-            year: 12.37,
-            all_time: 34.56,
-          }
-        };
-        
-        setPortfolio(enhancedPortfolio);
-        
-        // Fetch holdings
-        const holdingsData = await portfolioService.getHoldings(portfolioId);
-        
-        // Enhance holdings with additional data (mock data for demo)
-        const enhancedHoldings = holdingsData.map((holding, index) => {
-          // Generate pseudo-random values for demo
-          const currentPrice = 100 + Math.floor(Math.random() * 200);
-          const shares = holding.shares || Math.floor(Math.random() * 100) + 1;
-          const currentValue = currentPrice * shares;
-          const costBasis = holding.cost_basis || (currentPrice * (0.8 + Math.random() * 0.4));
-          const changePercent = ((currentPrice / costBasis) - 1) * 100;
-          
-          return {
-            ...holding,
-            current_price: currentPrice,
-            current_value: currentValue,
-            cost_basis: costBasis,
-            change_percent: changePercent,
-            change_value: currentValue - (costBasis * shares),
-            weight: 0, // Will calculate after totaling
-            name: `Company ${index + 1}`,
-            sector: ['Technology', 'Healthcare', 'Consumer', 'Financial', 'Energy'][Math.floor(Math.random() * 5)],
-          };
-        });
-        
-        // Calculate portfolio weights
-        const totalValue = enhancedHoldings.reduce((sum, h) => sum + (h.current_value || 0), 0);
-        const finalHoldings = enhancedHoldings.map(h => ({
-          ...h,
-          weight: ((h.current_value || 0) / totalValue) * 100
-        }));
-        
-        setHoldings(finalHoldings);
-        
-        // Generate mock performance data based on timeframe
-        const dates: string[] = [];
-        const values: number[] = [];
-        let days: number;
-        
-        switch (timeframe) {
-          case '1m': days = 30; break;
-          case '3m': days = 90; break;
-          case '6m': days = 180; break;
-          case '1y': days = 365; break;
-          case '5y': days = 365 * 5; break;
-          default: days = 90;
-        }
-        
-        const seedValue = 100000;
-        let currentValue = seedValue;
-        const today = new Date();
-        
-        for (let i = days; i >= 0; i--) {
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          dates.push(date.toLocaleDateString());
-          
-          // Random walk with slight upward bias
-          const change = (Math.random() - 0.48) * 0.015;
-          currentValue = currentValue * (1 + change);
-          values.push(currentValue);
-        }
-        
-        setPerformanceData({ dates, values });
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching portfolio data:', err);
-        setError('Failed to load portfolio data. Please try again later.');
-        setLoading(false);
-      }
-    };
+  const fetchPortfolioData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    fetchPortfolioData();
+      const formatDate = (date: Date) => date.toLocaleDateString('en-CA');
+
+      const [portfolioData, holdingsData] = await Promise.all([
+        portfolioService.getPortfolio(portfolioId),
+        portfolioService.getHoldings(portfolioId),
+      ]);
+
+      if (holdingsData.length === 0) {
+        setPortfolio({
+          ...portfolioData,
+          total_value: 0,
+          daily_change: 0,
+          stocks_count: 0,
+          performance: { day: 0, week: 0, month: 0, year: 0, all_time: 0 },
+        });
+        setHoldings([]);
+        setPerformanceData({ dates: [], values: [] });
+        setLoading(false);
+        return;
+      }
+
+      const today = new Date();
+      const endDate = formatDate(today);
+      const fetchDays = timeframe === '5y' ? 365 * 5 : 365;
+      const fetchStart = new Date(today);
+      fetchStart.setDate(fetchStart.getDate() - fetchDays);
+      const fetchStartDate = formatDate(fetchStart);
+
+      const displayDays: Record<string, number> = {
+        '1m': 30,
+        '3m': 90,
+        '6m': 180,
+        '1y': 365,
+        '5y': 365 * 5,
+      };
+      const displayStart = new Date(today);
+      displayStart.setDate(displayStart.getDate() - (displayDays[timeframe] || 90));
+      const displayStartDate = formatDate(displayStart);
+
+      const holdingsWithData = await Promise.all(
+        holdingsData.map(async (holding) => {
+          try {
+            const [financialData, historicalData] = await Promise.all([
+              stockService.getFinancialData(holding.ticker),
+              stockService.getHistoricalData(holding.ticker, fetchStartDate, endDate),
+            ]);
+            const sortedData = historicalData.sort((a, b) =>
+              new Date(a.date).getTime() - new Date(b.date).getTime()
+            );
+            return { holding, financialData, historicalData: sortedData };
+          } catch (err) {
+            console.error(`Error fetching data for ${holding.ticker}:`, err);
+            return { holding, financialData: null as any, historicalData: [] };
+          }
+        })
+      );
+
+      const currentMetrics = holdingsWithData.map(({ holding, financialData, historicalData }) => {
+        const shares = holding.shares || 0;
+        const costBasis = holding.cost_basis || 0;
+        const name = financialData?.name || holding.ticker;
+        const sector = financialData?.sector || 'Other';
+        const currentPrice = historicalData.length > 0 ? historicalData[historicalData.length - 1].close : 0;
+        const previousClose = historicalData.length > 1 ? historicalData[historicalData.length - 2].close : currentPrice;
+        const currentValue = currentPrice * shares;
+        const dailyChangePercent = previousClose > 0 ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
+        const changePercent = costBasis > 0 ? ((currentPrice / costBasis) - 1) * 100 : dailyChangePercent;
+        const changeValue = costBasis > 0 ? currentValue - costBasis * shares : 0;
+
+        return {
+          ...holding,
+          name,
+          sector,
+          current_price: currentPrice,
+          previous_close: previousClose,
+          current_value: currentValue,
+          change_percent: changePercent,
+          change_value: changeValue,
+          weight: 0,
+          historicalData,
+        };
+      });
+
+      const totalValue = currentMetrics.reduce((sum, h) => sum + (h.current_value || 0), 0);
+      const totalCostBasis = currentMetrics.reduce((sum, h) => sum + ((h.cost_basis || 0) * (h.shares || 0)), 0);
+
+      const enrichedHoldings = currentMetrics.map(({ historicalData, previous_close, ...h }) => ({
+        ...h,
+        weight: totalValue > 0 ? ((h.current_value || 0) / totalValue) * 100 : 0,
+      }));
+
+      setHoldings(enrichedHoldings);
+
+      // Build daily performance chart from the selected display window
+      const dateRange: string[] = [];
+      const d = new Date(displayStartDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      while (d <= end) {
+        dateRange.push(formatDate(d));
+        d.setDate(d.getDate() + 1);
+      }
+
+      const holdingPrices = currentMetrics.map((h) => {
+        const map = new Map<string, number>();
+        h.historicalData.forEach((point) => map.set(point.date, point.close));
+        const sortedDates = Array.from(map.keys()).sort();
+        return { shares: h.shares || 0, sortedDates, map };
+      });
+
+      const values: number[] = [];
+      for (const date of dateRange) {
+        let total = 0;
+        for (const hp of holdingPrices) {
+          let price: number | undefined;
+          for (let i = hp.sortedDates.length - 1; i >= 0; i--) {
+            if (hp.sortedDates[i] <= date) {
+              price = hp.map.get(hp.sortedDates[i]);
+              break;
+            }
+          }
+          if (price !== undefined) {
+            total += price * hp.shares;
+          }
+        }
+        values.push(total);
+      }
+
+      const dates = dateRange.map((date) => new Date(date + 'T00:00:00').toLocaleDateString());
+      const performanceValues = values;
+
+      const performance = {
+        day: 0,
+        week: 0,
+        month: 0,
+        year: 0,
+        all_time: 0,
+      };
+
+      const len = performanceValues.length;
+      if (len > 1 && performanceValues[len - 2] > 0) {
+        performance.day = ((performanceValues[len - 1] / performanceValues[len - 2]) - 1) * 100;
+      }
+      if (len > 5 && performanceValues[len - 6] > 0) {
+        performance.week = ((performanceValues[len - 1] / performanceValues[len - 6]) - 1) * 100;
+      }
+      if (len > 30 && performanceValues[len - 31] > 0) {
+        performance.month = ((performanceValues[len - 1] / performanceValues[len - 31]) - 1) * 100;
+      }
+      if (len > 365 && performanceValues[len - 366] > 0) {
+        performance.year = ((performanceValues[len - 1] / performanceValues[len - 366]) - 1) * 100;
+      }
+      if (totalCostBasis > 0) {
+        performance.all_time = ((totalValue / totalCostBasis) - 1) * 100;
+      }
+
+      (Object.keys(performance) as (keyof typeof performance)[]).forEach((key) => {
+        if (!isFinite(performance[key])) {
+          performance[key] = 0;
+        }
+      });
+
+      setPerformanceData({ dates, values });
+      setPortfolio({
+        ...portfolioData,
+        total_value: totalValue,
+        daily_change: performance.day,
+        stocks_count: enrichedHoldings.length,
+        performance,
+      });
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching portfolio data:', err);
+      setError('Failed to load portfolio data. Please try again later.');
+      setLoading(false);
+    }
   }, [portfolioId, timeframe]);
+
+  useEffect(() => {
+    fetchPortfolioData();
+  }, [fetchPortfolioData]);
 
   // Add holding dialog state
   const [isAddingHolding, setIsAddingHolding] = useState(false);
@@ -161,8 +246,7 @@ export default function PortfolioDetailPage({ params }: { params: { id: string }
     try {
       await portfolioService.addHolding(portfolioId, newHolding);
       // Refresh holdings
-      const freshHoldings = await portfolioService.getHoldings(portfolioId);
-      setHoldings(freshHoldings);
+      await fetchPortfolioData();
       setIsAddingHolding(false);
       // Reset form
       setNewHolding({

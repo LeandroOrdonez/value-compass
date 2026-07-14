@@ -1,3 +1,18 @@
+### 20260714:
+
+    - Request: Audit production readiness, remove production mock data, and address the highest-priority gaps.
+    - Problem Solving:
+        - Removed dashboard and alert mock/fallback records; portfolio details now calculate holdings, valuations, allocations, and performance from API data.
+        - Protected authenticated frontend routes with `RouteGuard` and `AuthGuard`.
+        - Updated frontend API configuration to use `NEXT_PUBLIC_API_URL`.
+        - Replaced `python-jose` with PyJWT, required a configured JWT secret, and enforced a 32-character minimum secret length.
+        - Removed default Compose credentials, restricted PostgreSQL host access to localhost, added service restart policies, and persisted generated reports in a named volume.
+        - Added root, frontend, and service `.env.example` templates with setup and secret-generation guidance.
+        - Removed the obsolete Docker Compose version declaration and tightened dashboard stock typing.
+    - Verification: Docker Compose configuration validation and Python syntax checks passed; changed frontend files have no TypeScript errors. The full frontend build remains blocked by unrelated existing Next.js 15 dynamic-route typing errors.
+    - Current Work: Completed production-readiness remediation and review follow-up fixes.
+    - Next Step: Resolve the remaining Next.js 15 dynamic-route type errors and add automated test coverage.
+
 ### 20260217:
 
     - Request: Audit implementation state and fix identified bugs.

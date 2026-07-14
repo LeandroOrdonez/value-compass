@@ -27,61 +27,9 @@ export default function AlertsPage() {
       try {
         setLoading(true);
         const data = await alertService.getAlerts();
-        
-        // Add some mock data for demo purposes
-        const mockAlerts: Alert[] = [
-          {
-            id: 1,
-            ticker: 'AAPL',
-            type: 'price',
-            threshold: 190.50,
-            condition: 'above',
-            is_active: true,
-            created_at: '2023-08-01T10:30:00Z',
-          },
-          {
-            id: 2,
-            ticker: 'GOOGL',
-            type: 'price',
-            threshold: 125.75,
-            condition: 'below',
-            is_active: true,
-            created_at: '2023-08-02T14:45:00Z',
-          },
-          {
-            id: 3,
-            ticker: 'MSFT',
-            type: 'valuation_score',
-            threshold: 8.5,
-            condition: 'above',
-            is_active: true,
-            created_at: '2023-08-03T09:15:00Z',
-          },
-          {
-            id: 4,
-            ticker: 'AMZN',
-            type: 'volume',
-            threshold: 15000000,
-            condition: 'above',
-            is_active: false,
-            created_at: '2023-08-04T11:20:00Z',
-            triggered_at: '2023-08-05T10:10:00Z',
-          },
-          {
-            id: 5,
-            ticker: 'TSLA',
-            type: 'price',
-            threshold: 240.00,
-            condition: 'below',
-            is_active: true,
-            created_at: '2023-08-05T16:30:00Z',
-          },
-        ];
-        
-        // Combine real and mock data
-        const combinedAlerts = [...mockAlerts, ...data];
-        setAlerts(combinedAlerts);
-        setFilteredAlerts(combinedAlerts);
+
+        setAlerts(data);
+        setFilteredAlerts(data);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching alerts:', err);

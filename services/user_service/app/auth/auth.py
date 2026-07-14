@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
@@ -14,9 +14,14 @@ from app.models.models import User
 load_dotenv()
 
 # Security settings
-SECRET_KEY = os.getenv("JWT_SECRET", "development_secret_key")
+SECRET_KEY = os.environ.get("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET environment variable must be set")
+if len(SECRET_KEY) < 32:
+    raise RuntimeError("JWT_SECRET must be at least 32 characters long")
 
 # Setup password hashing and OAuth2
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -62,7 +67,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
     
     user = db.query(User).filter(User.username == username).first()

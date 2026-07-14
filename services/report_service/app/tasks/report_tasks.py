@@ -1,4 +1,5 @@
 import os
+import math
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
@@ -181,7 +182,7 @@ async def generate_portfolio_html_report(portfolio, holdings, historical_data, f
     
     # Generate performance charts
     performance_chart_path = await generate_performance_chart(historical_data, holdings)
-    allocation_chart_path = await generate_allocation_chart(holdings, financial_data)
+    allocation_chart_path = await generate_allocation_chart(holdings, historical_data, financial_data)
     valuation_chart_path = await generate_valuation_chart(valuation_scores)
     
     # Prepare template variables
@@ -304,43 +305,56 @@ async def generate_basket_performance_chart(historical_data, basket_stocks):
     
     return None
 
-async def generate_allocation_chart(holdings, financial_data):
+async def generate_allocation_chart(holdings, historical_data, financial_data):
     """Generate a sector allocation chart for portfolio holdings"""
     # Extract sector information
     sectors = {}
     for holding in holdings:
         ticker = holding["ticker"]
-        shares = holding["shares"]
-        
-        if ticker in financial_data and financial_data[ticker]:
-            sector = financial_data[ticker].get("sector", "Unknown")
-            market_cap = financial_data[ticker].get("market_cap", 0)
-            
-            if sector not in sectors:
-                sectors[sector] = 0
-            
-            # Calculate value of holding
-            if market_cap and "close" in financial_data[ticker]:
-                price = financial_data[ticker]["close"]
-                value = shares * price
-                sectors[sector] += value
-    
-    if sectors:
-        # Create pie chart
-        plt.figure(figsize=(10, 6))
-        plt.pie(sectors.values(), labels=sectors.keys(), autopct='%1.1f%%', startangle=90)
-        plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-        plt.title('Portfolio Sector Allocation')
-        
-        # Save to a file
-        filename = f"allocation_{uuid.uuid4().hex}.png"
-        filepath = os.path.join("reports", filename)
-        plt.savefig(filepath)
-        plt.close()
-        
-        return filename
-    
-    return None
+        financials = financial_data.get(ticker) or {}
+        history = historical_data.get(ticker) or []
+        sector = financials.get("sector") or "Unknown"
+        shares = holding.get("shares") or 0
+
+        try:
+            shares = float(shares)
+        except (TypeError, ValueError):
+            continue
+
+        price = None
+        for point in reversed(history):
+            try:
+                candidate = float(point.get("close"))
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if math.isfinite(candidate) and candidate > 0:
+                price = candidate
+                break
+
+        if price is None:
+            continue
+
+        # Calculate value of holding
+        value = shares * price
+        if math.isfinite(value) and value > 0:
+            sectors[sector] = sectors.get(sector, 0) + value
+
+    if not sectors or sum(sectors.values()) <= 0:
+        return None
+
+    # Create pie chart
+    plt.figure(figsize=(10, 6))
+    plt.pie(sectors.values(), labels=sectors.keys(), autopct='%1.1f%%', startangle=90)
+    plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+    plt.title('Portfolio Sector Allocation')
+
+    # Save to a file
+    filename = f"allocation_{uuid.uuid4().hex}.png"
+    filepath = os.path.join("reports", filename)
+    plt.savefig(filepath)
+    plt.close()
+
+    return filename
 
 async def generate_valuation_chart(valuation_scores):
     """Generate a valuation score chart"""

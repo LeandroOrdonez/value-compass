@@ -2,18 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import stockService from '@/services/stockService';
+import stockService, { SearchResult } from '@/services/stockService';
 import portfolioService from '@/services/portfolioService';
 import basketService from '@/services/basketService';
-import alertService from '@/services/alertService';
+import alertService, { Alert } from '@/services/alertService';
+import { Basket } from '@/services/basketService';
+import { Portfolio } from '@/services/portfolioService';
+
+interface RecentStock {
+  ticker: string;
+  name: string;
+  price: number;
+  change_percent: string;
+}
 
 export default function Dashboard() {
-  const [recentStocks, setRecentStocks] = useState([]);
-  const [portfolios, setPortfolios] = useState([]);
-  const [baskets, setBaskets] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+  const [recentStocks, setRecentStocks] = useState<RecentStock[]>([]);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [baskets, setBaskets] = useState<Basket[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -28,25 +37,14 @@ export default function Dashboard() {
         ]);
         
         // Get trending stocks from Yahoo Finance
-        let stocksData = await stockService.getTrendingStocks(5);
-        
-        // Fallback data if trending stocks fetch fails or returns empty results
-        if (!stocksData || stocksData.length === 0) {
-          stocksData = [
-            { ticker: "AAPL", name: "Apple Inc.", price: 170.50, change_percent: "0.75" },
-            { ticker: "MSFT", name: "Microsoft Corp.", price: 330.42, change_percent: "1.20" },
-            { ticker: "GOOG", name: "Alphabet Inc.", price: 135.60, change_percent: "-0.30" },
-            { ticker: "AMZN", name: "Amazon.com Inc.", price: 178.15, change_percent: "0.85" },
-            { ticker: "META", name: "Meta Platforms Inc.", price: 475.90, change_percent: "2.10" }
-          ];
-        }
+        const stocksData = await stockService.getTrendingStocks(5);
 
         // Create a formatted version of stock data for display
-        const formattedStocks = stocksData.map((stock: any) => ({
+        const formattedStocks: RecentStock[] = (stocksData || []).map((stock: SearchResult) => ({
           ticker: stock.ticker,
           name: stock.name,
           price: stock.price || 0,
-          change_percent: stock.change_percent || '0.00' // Use provided value or default
+          change_percent: stock.change_percent || '0.00'
         }));
 
         setRecentStocks(formattedStocks.slice(0, 5));

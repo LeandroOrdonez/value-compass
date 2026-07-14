@@ -25,7 +25,7 @@ export interface UpdateAlertData {
 }
 
 const alertService = {
-  getAlerts: async () => {
+  getAlerts: async (): Promise<Alert[]> => {
     // Get the current user ID from the API
     let userId = null;
     try {
@@ -44,7 +44,7 @@ const alertService = {
       ticker: alert.ticker,
       type: alert.alert_type as 'price' | 'volume' | 'valuation_score',
       threshold: alert.threshold,
-      condition: alert.parameters?.direction === 'above' ? 'above' : 'below',
+      condition: alert.parameters?.direction === 'above' ? 'above' as const : 'below' as const,
       is_active: alert.is_active,
       created_at: alert.created_at,
       triggered_at: alert.last_triggered_at
@@ -130,7 +130,7 @@ const alertService = {
     }
     
     // Use the correct endpoint with user ID and filter alerts that have been triggered
-    const response = await api.get<Alert[]>(`/report-service/alerts/list?user_id=${userId}`);
+    const response = await api.get<any[]>(`/report-service/alerts/list?user_id=${userId}`);
     
     // Filter alerts that have been triggered (last_triggered_at is not null)
     const triggeredAlerts = response.data.filter(alert => alert.last_triggered_at);
@@ -141,7 +141,7 @@ const alertService = {
       ticker: alert.ticker,
       type: alert.alert_type as 'price' | 'volume' | 'valuation_score',
       threshold: alert.threshold,
-      condition: alert.parameters?.direction === 'above' ? 'above' : 'below',
+      condition: alert.parameters?.direction === 'above' ? 'above' as const : 'below' as const,
       is_active: alert.is_active,
       created_at: alert.created_at,
       triggered_at: alert.last_triggered_at
