@@ -95,6 +95,9 @@ export default function Navbar() {
             <Link href="/baskets" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
               Baskets
             </Link>
+            <Link href="/valuation-rules" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
+              Rules
+            </Link>
             <Link href="/reports" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
               Reports
             </Link>
@@ -180,6 +183,9 @@ export default function Navbar() {
             </Link>
             <Link href="/baskets" className="block text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
               Baskets
+            </Link>
+            <Link href="/valuation-rules" className="block text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
+              Rules
             </Link>
             <Link href="/reports" className="block text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md">
               Reports

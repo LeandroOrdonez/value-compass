@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,33 @@ from app.database.database import get_db
 from app.models.models import ValuationRule
 
 router = APIRouter()
+
+@router.get("/custom/{rule_id}", response_model=Dict[str, Any])
+async def get_custom_rule(rule_id: int, user_id: int = Query(...), db: Session = Depends(get_db)):
+    """Get a custom valuation rule by ID"""
+    try:
+        rule = db.query(ValuationRule).filter(ValuationRule.id == rule_id).first()
+        if not rule:
+            raise HTTPException(status_code=404, detail=f"Rule with id {rule_id} not found")
+        if rule.user_id is None:
+            raise HTTPException(status_code=403, detail="Cannot view system rules as custom")
+        if rule.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this rule")
+        
+        return {
+            "id": rule.id,
+            "name": rule.name,
+            "description": rule.description,
+            "is_default": rule.is_default,
+            "user_id": rule.user_id,
+            "rule_config": rule.rule_config,
+            "created_at": rule.created_at,
+            "updated_at": rule.updated_at
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve custom rule: {str(e)}")
 
 @router.post("/custom", response_model=Dict[str, Any])
 async def create_custom_rule(rule_data: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
@@ -57,7 +84,7 @@ async def create_custom_rule(rule_data: Dict[str, Any] = Body(...), db: Session 
         raise HTTPException(status_code=500, detail=f"Failed to create custom rule: {str(e)}")
 
 @router.put("/custom/{rule_id}", response_model=Dict[str, Any])
-async def update_custom_rule(rule_id: int, rule_data: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
+async def update_custom_rule(rule_id: int, rule_data: Dict[str, Any] = Body(...), user_id: int = Query(...), db: Session = Depends(get_db)):
     """Update a custom valuation rule"""
     try:
         # Get the existing rule
@@ -68,6 +95,9 @@ async def update_custom_rule(rule_id: int, rule_data: Dict[str, Any] = Body(...)
         # Check if user owns the rule
         if rule.user_id is None:
             raise HTTPException(status_code=403, detail="Cannot modify system rules")
+        
+        if rule.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to modify this rule")
         
         # Update fields if provided
         if 'name' in rule_data:
@@ -111,7 +141,7 @@ async def update_custom_rule(rule_id: int, rule_data: Dict[str, Any] = Body(...)
         raise HTTPException(status_code=500, detail=f"Failed to update custom rule: {str(e)}")
 
 @router.delete("/custom/{rule_id}", response_model=Dict[str, Any])
-async def delete_custom_rule(rule_id: int, db: Session = Depends(get_db)):
+async def delete_custom_rule(rule_id: int, user_id: int = Query(...), db: Session = Depends(get_db)):
     """Delete a custom valuation rule"""
     try:
         # Get the existing rule
@@ -122,6 +152,9 @@ async def delete_custom_rule(rule_id: int, db: Session = Depends(get_db)):
         # Check if user owns the rule
         if rule.user_id is None:
             raise HTTPException(status_code=403, detail="Cannot delete system rules")
+        
+        if rule.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this rule")
         
         # Delete the rule
         db.delete(rule)

@@ -11,6 +11,7 @@ const protectedPaths = [
   "/reports",
   "/profile",
   "/settings",
+  "/valuation-rules",
 ];
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
