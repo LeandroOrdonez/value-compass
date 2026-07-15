@@ -44,6 +44,7 @@ export interface SearchResult {
   price?: number | null;
   currency?: string;
   exchange?: string;
+  exchange_display?: string;
   country?: string;
   logo_url?: string;
   website?: string;

@@ -4,16 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import alertService, { CreateAlertData } from '@/services/alertService';
-import stockService from '@/services/stockService';
+import stockService, { SearchResult } from '@/services/stockService';
 import StockSearch from '@/components/StockSearch';
-
-interface SearchResult {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  price?: number;
-  change_percent?: string;
-}
 
 interface CurrentPrice {
   price: number;
@@ -56,10 +48,12 @@ export default function CreateAlertPage() {
           });
           
           // Update threshold with current price
-          setAlertData(prev => ({
-            ...prev,
-            threshold: stockDetails.current_price,
-          }));
+          if (stockDetails.current_price != null) {
+            setAlertData(prev => ({
+              ...prev,
+              threshold: stockDetails.current_price as number,
+            }));
+          }
         }
       } catch (err) {
         console.error('Error fetching stock details:', err);

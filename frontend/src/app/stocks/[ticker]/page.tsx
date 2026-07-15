@@ -34,7 +34,7 @@ ChartJS.register(
   Filler
 );
 
-export default function StockDetailPage({ params }: { params: { ticker: string } }) {
+export default function StockDetailPage({ params }: { params: Promise<{ ticker: string }> }) {
   const resolvedParams = use(params);
   const ticker = resolvedParams.ticker;
   const [historicalData, setHistoricalData] = useState<StockHistoricalData[]>([]);

@@ -3,7 +3,7 @@ import { debounce } from 'lodash';
 import stockService, { SearchResult } from '@/services/stockService';
 
 interface StockSearchProps {
-  onSelect: (stock: SearchResult) => void;
+  onSelect: (stock: SearchResult) => void | Promise<void>;
   placeholder?: string;
   className?: string;
   initialValue?: string;

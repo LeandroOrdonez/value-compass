@@ -94,6 +94,11 @@ export default function StocksPage() {
       let valA = a[sortBy as keyof Stock];
       let valB = b[sortBy as keyof Stock];
       
+      // Handle null/undefined values
+      if (valA == null || valB == null) {
+        return 0;
+      }
+      
       // Special handling for numeric strings like market_cap
       if (sortBy === 'market_cap') {
         valA = parseFloat(valA as string) || 0;

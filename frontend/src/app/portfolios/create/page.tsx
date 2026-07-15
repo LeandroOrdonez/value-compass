@@ -4,14 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import portfolioService, { CreatePortfolioData } from '@/services/portfolioService';
+import stockService, { SearchResult } from '@/services/stockService';
 import StockSearch from '@/components/StockSearch';
-
-interface SearchResult {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  price?: number;
-}
 
 interface PortfolioHolding {
   ticker: string;

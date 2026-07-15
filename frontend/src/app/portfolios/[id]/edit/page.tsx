@@ -5,16 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { use } from 'react';
 import portfolioService, { Portfolio, PortfolioHolding, UpdatePortfolioData } from '@/services/portfolioService';
+import stockService, { SearchResult } from '@/services/stockService';
 import StockSearch from '@/components/StockSearch';
 
-interface SearchResult {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  price?: number;
-}
-
-export default function EditPortfolioPage({ params }: { params: { id: string } }) {
+export default function EditPortfolioPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const unwrappedParams = use(params);
   const portfolioId = parseInt(unwrappedParams.id);

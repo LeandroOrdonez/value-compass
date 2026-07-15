@@ -4,17 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { use } from 'react';
-import basketService, { Basket, BasketStock } from '@/services/basketService';
+import basketService, { Basket, BasketStock, BasketValuationResult } from '@/services/basketService';
+import stockService, { SearchResult } from '@/services/stockService';
 import StockSearch from '@/components/StockSearch';
 
-interface SearchResult {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  price?: number;
-}
-
-export default function BasketDetailPage({ params }: { params: { id: string } }) {
+export default function BasketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const unwrappedParams = use(params);
   const basketId = parseInt(unwrappedParams.id);
@@ -31,7 +25,7 @@ export default function BasketDetailPage({ params }: { params: { id: string } })
   const [showAddStockForm, setShowAddStockForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showValuationScore, setShowValuationScore] = useState(false);
-  const [valuationScores, setValuationScores] = useState<any>(null);
+  const [valuationScores, setValuationScores] = useState<BasketValuationResult | null>(null);
   const [valuationLoading, setValuationLoading] = useState(false);
 
   useEffect(() => {
